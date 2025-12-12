@@ -39,8 +39,13 @@ async def handle_message_event(data: lark.im.v1.P2ImMessageReceiveV1):
         event = data.event
         sender = event.sender
         user_id = sender.sender_id.open_id
+        sender_type = sender.sender_type
 
-        logger.info(f"Received message from user: {user_id}")
+        logger.info(f"Received message from user: {user_id}, sender_type: {sender_type}")
+
+        if sender_type == "app":
+            logger.info("Ignoring message from bot itself")
+            return
 
         if not check_lark_auth(user_id):
             logger.warning(f"Unauthorized access attempt from user {user_id}")
@@ -77,7 +82,6 @@ async def handle_message_event(data: lark.im.v1.P2ImMessageReceiveV1):
                 agent_config=config.agent_config
             )
 
-            await interface.send_message(f"开始执行任务: {text}")
             result = await runner.run_task(text)
             logger.info(f"Task completed for user {user_id}: {result}")
 
