@@ -10,12 +10,17 @@ from phone_agent.adb.connection import (
 from phone_agent.adb.device import (
     back,
     double_tap,
+    ensure_screen_unlocked,
     get_current_app,
     home,
+    is_screen_locked,
+    is_screen_on,
     launch_app,
     long_press,
     swipe,
     tap,
+    unlock_screen,
+    wake_up,
 )
 from phone_agent.adb.input import (
     clear_text,
@@ -42,6 +47,12 @@ __all__ = [
     "double_tap",
     "long_press",
     "launch_app",
+    # Screen unlock
+    "is_screen_on",
+    "is_screen_locked",
+    "wake_up",
+    "unlock_screen",
+    "ensure_screen_unlocked",
     # Connection management
     "ADBConnection",
     "DeviceInfo",

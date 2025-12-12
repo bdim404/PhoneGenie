@@ -222,3 +222,138 @@ def _get_adb_prefix(device_id: str | None) -> list:
     if device_id:
         return ["adb", "-s", device_id]
     return ["adb"]
+
+
+def is_screen_on(device_id: str | None = None) -> bool:
+    """
+    Check if the device screen is on.
+
+    Args:
+        device_id: Optional ADB device ID.
+
+    Returns:
+        True if screen is on, False otherwise.
+    """
+    adb_prefix = _get_adb_prefix(device_id)
+
+    result = subprocess.run(
+        adb_prefix + ["shell", "dumpsys", "power"], capture_output=True, text=True
+    )
+    output = result.stdout
+
+    for line in output.split("\n"):
+        if "mScreenOn=" in line or "Display Power" in line or "state=" in line:
+            if "mScreenOn=true" in line or "state=ON" in line:
+                return True
+            if "mScreenOn=false" in line or "state=OFF" in line:
+                return False
+
+    return False
+
+
+def is_screen_locked(device_id: str | None = None) -> bool:
+    """
+    Check if the device screen is locked.
+
+    Args:
+        device_id: Optional ADB device ID.
+
+    Returns:
+        True if screen is locked, False otherwise.
+    """
+    adb_prefix = _get_adb_prefix(device_id)
+
+    result = subprocess.run(
+        adb_prefix + ["shell", "dumpsys", "window"], capture_output=True, text=True
+    )
+    output = result.stdout
+
+    for line in output.split("\n"):
+        if "mDreamingLockscreen=" in line:
+            if "true" in line:
+                return True
+        if "mShowingLockscreen=" in line:
+            if "true" in line:
+                return True
+        if "showing=" in line and "Keyguard" in line:
+            if "showing=true" in line:
+                return True
+
+    return False
+
+
+def wake_up(device_id: str | None = None, delay: float = 0.5) -> None:
+    """
+    Wake up the device screen.
+
+    Args:
+        device_id: Optional ADB device ID.
+        delay: Delay in seconds after waking up.
+    """
+    adb_prefix = _get_adb_prefix(device_id)
+
+    subprocess.run(
+        adb_prefix + ["shell", "input", "keyevent", "KEYCODE_WAKEUP"],
+        capture_output=True,
+    )
+    time.sleep(delay)
+
+
+def unlock_screen(
+    device_id: str | None = None, unlock_method: str = "swipe", delay: float = 1.0
+) -> bool:
+    """
+    Unlock the device screen (password-free unlock only).
+
+    Args:
+        device_id: Optional ADB device ID.
+        unlock_method: Unlock method - "swipe" (up swipe) or "menu" (menu key).
+        delay: Delay in seconds after unlock attempt.
+
+    Returns:
+        True if unlock attempt was made, False otherwise.
+    """
+    adb_prefix = _get_adb_prefix(device_id)
+
+    if unlock_method == "swipe":
+        subprocess.run(
+            adb_prefix + ["shell", "input", "swipe", "300", "1000", "300", "300"],
+            capture_output=True,
+        )
+    elif unlock_method == "menu":
+        subprocess.run(
+            adb_prefix + ["shell", "input", "keyevent", "82"], capture_output=True
+        )
+    else:
+        return False
+
+    time.sleep(delay)
+    return True
+
+
+def ensure_screen_unlocked(
+    device_id: str | None = None, unlock_method: str = "swipe", max_retries: int = 2
+) -> bool:
+    """
+    Ensure the device screen is unlocked by checking state and unlocking if needed.
+
+    Args:
+        device_id: Optional ADB device ID.
+        unlock_method: Unlock method - "swipe" or "menu".
+        max_retries: Maximum number of unlock attempts.
+
+    Returns:
+        True if screen is unlocked, False if unlock failed.
+    """
+    for attempt in range(max_retries):
+        if not is_screen_on(device_id):
+            wake_up(device_id)
+            time.sleep(0.5)
+
+        if not is_screen_locked(device_id):
+            return True
+
+        unlock_screen(device_id, unlock_method)
+        time.sleep(0.5)
+
+    return not is_screen_locked(device_id)

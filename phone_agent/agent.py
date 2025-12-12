@@ -139,6 +139,14 @@ class PhoneAgent:
         """Execute a single step of the agent loop."""
         self._step_count += 1
 
+        from phone_agent.adb import ensure_screen_unlocked
+
+        try:
+            ensure_screen_unlocked(self.agent_config.device_id)
+        except Exception as e:
+            if self.agent_config.verbose:
+                print(f"Warning: Failed to unlock screen: {e}")
+
         # Capture current screen state
         screenshot = get_screenshot(self.agent_config.device_id)
         current_app = get_current_app(self.agent_config.device_id)
